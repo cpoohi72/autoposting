@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
 
 function OfflinePostScheduler() {
-  // 状態管理
+  // 既存の状態
   const [selectedImage, setSelectedImage] = useState(null);
   const [caption, setCaption] = useState("");
   const [postingOption, setPostingOption] = useState("whenConnected");
+  
+  // 日時選択用の状態を追加
+  const [scheduledDateTime, setScheduledDateTime] = useState("");
+
+  // 現在の日時をYYYY-MM-DDThh:mm形式で取得（入力の最小値として使用）
+  const now = new Date();
+  const minDateTime = now.toISOString().slice(0, 16);
 
   // 画像選択ハンドラー
   const handleImageChange = (e) => {
@@ -20,18 +27,49 @@ function OfflinePostScheduler() {
 
   // 保存ハンドラー
   const handleSave = () => {
-    // ここに保存ロジックを実装
-    console.log("保存されたデータ:", {
+    // バリデーション
+    if (!selectedImage) {
+      alert("画像を選択してください");
+      return;
+    }
+
+    // 日時指定が選択されているが日時が設定されていない場合
+    if (postingOption === "specificTime" && !scheduledDateTime) {
+      alert("投稿日時を指定してください");
+      return;
+    }
+
+    // 投稿データを作成
+    const postData = {
+      id: Date.now(),
       image: selectedImage,
       caption,
       postingOption,
-      timestamp: new Date().toISOString()
-    });
-    alert("投稿が保存されました");
+      scheduledDateTime: postingOption === "specificTime" ? scheduledDateTime : null,
+      createdAt: new Date().toISOString(),
+    };
+    
+    // ローカルストレージから既存の投稿を取得
+    const savedPosts = JSON.parse(localStorage.getItem('offlinePosts') || '[]');
+    
+    // 新しい投稿を追加
+    savedPosts.push(postData);
+    
+    // ローカルストレージに保存
+    localStorage.setItem('offlinePosts', JSON.stringify(savedPosts));
+    
+    // 保存後の処理
+    alert('投稿が保存されました');
+    
+    // フォームをリセット
+    setSelectedImage(null);
+    setCaption('');
+    setScheduledDateTime('');
   };
 
   return (
     <div className="max-w-md mx-auto bg-white min-h-screen flex flex-col">
+      
       {/* ヘッダー */}
       <div className="flex justify-between items-center px-6 py-4">
         <h1 className="text-3xl font-bold">オフライン予約投稿</h1>
@@ -95,15 +133,6 @@ function OfflinePostScheduler() {
       {/* 投稿時刻オプション */}
       <div className="mx-6 my-4">
         <h2 className="text-2xl font-bold mb-4">投稿時刻</h2>
-        <div className="flex items-center mb-4">
-          <div
-            className={`w-6 h-6 rounded-full border-2 border-gray-400 mr-3 flex items-center justify-center ${postingOption === "whenConnected" ? "border-blue-700" : ""}`}
-            onClick={() => setPostingOption("whenConnected")}
-          >
-            {postingOption === "whenConnected" && <div className="w-3 h-3 rounded-full bg-blue-700"></div>}
-          </div>
-          <label className="text-xl">インターネット接続時に投稿</label>
-        </div>
 
         <div className="flex items-center mb-4">
           <div
@@ -113,6 +142,29 @@ function OfflinePostScheduler() {
             {postingOption === "specificTime" && <div className="w-3 h-3 rounded-full bg-blue-700"></div>}
           </div>
           <label className="text-xl">日時を指定</label>
+        </div>
+
+        {/* 日時を指定が選択された場合に表示 */}
+        {postingOption === "specificTime" && (
+          <div className="ml-9 mb-4">
+            <input
+              type="datetime-local"
+              value={scheduledDateTime}
+              onChange={(e) => setScheduledDateTime(e.target.value)}
+              min={minDateTime}
+              className="w-full border border-gray-200 rounded-lg p-2 text-lg"
+            />
+          </div>
+        )}
+
+        <div className="flex items-center mb-4">
+          <div
+            className={`w-6 h-6 rounded-full border-2 border-gray-400 mr-3 flex items-center justify-center ${postingOption === "whenConnected" ? "border-blue-700" : ""}`}
+            onClick={() => setPostingOption("whenConnected")}
+          >
+            {postingOption === "whenConnected" && <div className="w-3 h-3 rounded-full bg-blue-700"></div>}
+          </div>
+          <label className="text-xl">インターネット接続時に投稿</label>
         </div>
       </div>
 
@@ -125,7 +177,7 @@ function OfflinePostScheduler() {
           保存
         </button>
       </div>
-    </div>
+      </div>
   );
 }
 
