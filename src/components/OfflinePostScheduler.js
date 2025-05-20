@@ -32,16 +32,6 @@ function OfflinePostScheduler() {
 
   return (
     <div className="max-w-md mx-auto bg-white min-h-screen flex flex-col">
-      {/* ステータスバー */}
-      <div className="flex justify-between items-center p-4 text-black">
-        <div className="text-lg font-semibold">9:41</div>
-        <div className="flex items-center gap-1">
-          <div className="h-3 w-3 rounded-full bg-black"></div>
-          <div className="h-3 w-3 rounded-full bg-black"></div>
-          <div className="h-3 w-3 rounded-full bg-black"></div>
-        </div>
-      </div>
-
       {/* ヘッダー */}
       <div className="flex justify-between items-center px-6 py-4">
         <h1 className="text-3xl font-bold">オフライン予約投稿</h1>
@@ -105,6 +95,15 @@ function OfflinePostScheduler() {
       {/* 投稿時刻オプション */}
       <div className="mx-6 my-4">
         <h2 className="text-2xl font-bold mb-4">投稿時刻</h2>
+        <div className="flex items-center mb-4">
+          <div
+            className={`w-6 h-6 rounded-full border-2 border-gray-400 mr-3 flex items-center justify-center ${postingOption === "whenConnected" ? "border-blue-700" : ""}`}
+            onClick={() => setPostingOption("whenConnected")}
+          >
+            {postingOption === "whenConnected" && <div className="w-3 h-3 rounded-full bg-blue-700"></div>}
+          </div>
+          <label className="text-xl">インターネット接続時に投稿</label>
+        </div>
 
         <div className="flex items-center mb-4">
           <div
@@ -114,16 +113,6 @@ function OfflinePostScheduler() {
             {postingOption === "specificTime" && <div className="w-3 h-3 rounded-full bg-blue-700"></div>}
           </div>
           <label className="text-xl">日時を指定</label>
-        </div>
-
-        <div className="flex items-center mb-4">
-          <div
-            className={`w-6 h-6 rounded-full border-2 border-gray-400 mr-3 flex items-center justify-center ${postingOption === "whenConnected" ? "border-blue-700" : ""}`}
-            onClick={() => setPostingOption("whenConnected")}
-          >
-            {postingOption === "whenConnected" && <div className="w-3 h-3 rounded-full bg-blue-700"></div>}
-          </div>
-          <label className="text-xl">インターネット接続時に投稿</label>
         </div>
       </div>
 
@@ -136,9 +125,6 @@ function OfflinePostScheduler() {
           保存
         </button>
       </div>
-
-      {/* ホームインジケーター */}
-      <div className="h-1 w-32 bg-black rounded-full mx-auto mb-2"></div>
     </div>
   );
 }
