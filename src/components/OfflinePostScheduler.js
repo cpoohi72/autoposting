@@ -1,17 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { savePost, getAllPosts } from '../utils/indexedDB';
 
 function OfflinePostScheduler() {
   // 既存の状態
   const [selectedImage, setSelectedImage] = useState(null);
   const [caption, setCaption] = useState("");
   const [postingOption, setPostingOption] = useState("whenConnected");
-  
-  // 日時選択用の状態を追加
   const [scheduledDateTime, setScheduledDateTime] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedPosts, setSavedPosts] = useState([]);
+  const [saveError, setSaveError] = useState(null);
 
   // 現在の日時をYYYY-MM-DDThh:mm形式で取得（入力の最小値として使用）
   const now = new Date();
   const minDateTime = now.toISOString().slice(0, 16);
+
+  // コンポーネントマウント時に保存済み投稿を取得
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const posts = await getAllPosts();
+        setSavedPosts(posts);
+      } catch (error) {
+        console.error('保存済み投稿の取得に失敗しました:', error);
+      }
+    };
+
+    fetchPosts();
+  }, []);
 
   // 画像選択ハンドラー
   const handleImageChange = (e) => {
@@ -26,7 +42,7 @@ function OfflinePostScheduler() {
   };
 
   // 保存ハンドラー
-  const handleSave = () => {
+  const handleSave = async () => {
     // バリデーション
     if (!selectedImage) {
       alert("画像を選択してください");
@@ -39,32 +55,39 @@ function OfflinePostScheduler() {
       return;
     }
 
-    // 投稿データを作成
-    const postData = {
-      id: Date.now(),
-      image: selectedImage,
-      caption,
-      postingOption,
-      scheduledDateTime: postingOption === "specificTime" ? scheduledDateTime : null,
-      createdAt: new Date().toISOString(),
-    };
-    
-    // ローカルストレージから既存の投稿を取得
-    const savedPosts = JSON.parse(localStorage.getItem('offlinePosts') || '[]');
-    
-    // 新しい投稿を追加
-    savedPosts.push(postData);
-    
-    // ローカルストレージに保存
-    localStorage.setItem('offlinePosts', JSON.stringify(savedPosts));
-    
-    // 保存後の処理
-    alert('投稿が保存されました');
-    
-    // フォームをリセット
-    setSelectedImage(null);
-    setCaption('');
-    setScheduledDateTime('');
+    try {
+      setIsSaving(true);
+      setSaveError(null);
+
+      // 投稿データを作成
+      const postData = {
+        image: selectedImage,
+        caption,
+        postingOption,
+        scheduledDateTime: postingOption === "specificTime" ? scheduledDateTime : null,
+      };
+      
+      // IndexedDBに保存
+      const postId = await savePost(postData);
+      
+      // 保存後の処理
+      alert('投稿が保存されました');
+      
+      // フォームをリセット
+      setSelectedImage(null);
+      setCaption('');
+      setScheduledDateTime('');
+      
+      // 保存済み投稿リストを更新
+      const updatedPosts = await getAllPosts();
+      setSavedPosts(updatedPosts);
+    } catch (error) {
+      console.error('投稿の保存中にエラーが発生しました:', error);
+      setSaveError('投稿の保存に失敗しました。もう一度お試しください。');
+      alert('投稿の保存に失敗しました。もう一度お試しください。');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -168,13 +191,21 @@ function OfflinePostScheduler() {
         </div>
       </div>
 
+      {/* エラーメッセージ */}
+      {saveError && (
+        <div className="mx-6 my-2 text-red-500">
+          {saveError}
+        </div>
+      )}
+
       {/* 保存ボタン */}
       <div className="mx-6 my-4 mt-auto mb-8">
         <button 
-          className="w-full bg-[#f47458] text-white rounded-lg py-4 text-xl font-medium"
+          className="w-full bg-[#f47458] text-white rounded-lg py-4 text-xl font-medium disabled:opacity-50"
           onClick={handleSave}
+          disabled={isSaving}
         >
-          保存
+          {isSaving ? '保存中...' : '保存'}
         </button>
       </div>
       </div>
