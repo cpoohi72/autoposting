@@ -31,7 +31,12 @@ export const sendPostToAPI = async (post) => {
   // 実際のアプリでは、ここで実際のAPIリクエストを行います
   return new Promise((resolve) => {
     setTimeout(() => {
-      console.log('投稿を送信しました:', post);
+      console.log('投稿を送信しました:', {
+        caption: post.caption,
+        image: post.image ? 'Image data included' : 'No image',
+        postingOption: post.postingOption,
+        scheduledDateTime: post.scheduledDateTime
+      });
       resolve({ success: true, message: '投稿が完了しました' });
     }, 1500);
   });
