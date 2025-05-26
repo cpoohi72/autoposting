@@ -1,17 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { getAllPosts, deletePost } from '../utils/indexedDB';
+import { getAllPosts, deletePost, POST_STATUS } from '../utils/indexedDB';
 
-function SavedPosts() {
+function SavedPosts({ isOnline, setNotification }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showPosted, setShowPosted] = useState(false);
 
   // 投稿を取得
   const fetchPosts = async () => {
     try {
       setLoading(true);
       const fetchedPosts = await getAllPosts();
-      setPosts(fetchedPosts);
+      
+      const filteredPosts = showPosted 
+        ? fetchedPosts 
+        : fetchedPosts.filter(post => post.status !== POST_STATUS.POSTED);
+      
+      setPosts(filteredPosts);
       setError(null);
     } catch (err) {
       setError('投稿の取得に失敗しました');
@@ -26,19 +32,25 @@ function SavedPosts() {
     if (window.confirm('この投稿を削除してもよろしいですか？')) {
       try {
         await deletePost(id);
-        // 投稿リストを更新
         fetchPosts();
+        setNotification({
+          type: 'success',
+          message: '投稿を削除しました'
+        });
       } catch (err) {
         setError('投稿の削除に失敗しました');
         console.error(err);
+        setNotification({
+          type: 'error',
+          message: '投稿の削除に失敗しました'
+        });
       }
     }
   };
 
-  // コンポーネントマウント時に投稿を取得
   useEffect(() => {
     fetchPosts();
-  }, []);
+  }, [showPosted, isOnline]);
 
   // 日時のフォーマット
   const formatDate = (dateString) => {
@@ -53,57 +65,99 @@ function SavedPosts() {
     });
   };
 
+  // 投稿ステータスに基づいたラベルとスタイルを取得
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case POST_STATUS.POSTED:
+        return { label: '投稿済み', className: 'bg-green-100 text-green-800' };
+      case POST_STATUS.FAILED:
+        return { label: '投稿失敗', className: 'bg-red-100 text-red-800' };
+      case POST_STATUS.PENDING:
+      default:
+        return { label: '投稿待ち', className: 'bg-yellow-100 text-yellow-800' };
+    }
+  };
+
   return (
-    <div className="max-w-md mx-auto p-4">
-      <h2 className="text-2xl font-bold mb-4">保存済み投稿</h2>
+    <div className="max-w-md mx-auto h-screen flex flex-col p-4">
+      <h2 className="text-xl font-bold mb-3">保存済み投稿</h2>
       
-      {loading && <p className="text-center">読み込み中...</p>}
+      {/* 表示切替スイッチ */}
+      <div className="flex items-center mb-3">
+        <label className="flex items-center cursor-pointer">
+          <div className="relative">
+            <input 
+              type="checkbox" 
+              className="sr-only" 
+              checked={showPosted} 
+              onChange={() => setShowPosted(!showPosted)} 
+            />
+            <div className={`block w-8 h-5 rounded-full ${showPosted ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+            <div className={`dot absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition ${showPosted ? 'transform translate-x-3' : ''}`}></div>
+          </div>
+          <div className="ml-2 text-gray-700 text-sm">
+            投稿済みの投稿を表示
+          </div>
+        </label>
+      </div>
       
-      {error && <p className="text-red-500">{error}</p>}
+      {loading && <p className="text-center text-sm">読み込み中...</p>}
+      
+      {error && <p className="text-red-500 text-sm">{error}</p>}
       
       {!loading && posts.length === 0 && (
-        <p className="text-center text-gray-500">保存された投稿はありません</p>
+        <p className="text-center text-gray-500 text-sm">保存された投稿はありません</p>
       )}
       
-      <div className="space-y-4">
-        {posts.map((post) => (
-          <div key={post.id} className="border rounded-lg p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <p className="font-medium">
-                {post.postingOption === 'specificTime' 
-                  ? `予定日時: ${formatDate(post.scheduledDateTime)}` 
-                  : 'インターネット接続時に投稿'}
+      {/* スクロール可能な投稿リスト */}
+      <div className="flex-1 overflow-y-auto space-y-3">
+        {posts.map((post) => {
+          const statusInfo = getStatusLabel(post.status);
+          
+          return (
+            <div key={post.id} className="border rounded-lg p-3 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <span className={`text-xs px-2 py-1 rounded-full ${statusInfo.className}`}>
+                    {statusInfo.label}
+                  </span>
+                  <p className="font-medium mt-1 text-sm">
+                    {post.postingOption === 'specificTime' 
+                      ? `予定日時: ${formatDate(post.scheduledDateTime)}` 
+                      : 'インターネット接続時に投稿'}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => handleDelete(post.id)}
+                  className="text-red-500 hover:text-red-700 text-sm"
+                >
+                  削除
+                </button>
+              </div>
+              
+              {post.image && (
+                <img 
+                  src={post.image || "/placeholder.svg"} 
+                  alt="投稿画像" 
+                  className="w-full h-24 object-cover rounded-lg mb-2" 
+                />
+              )}
+              
+              {post.caption && (
+                <p className="text-gray-700 text-sm">{post.caption}</p>
+              )}
+              
+              <p className="text-xs text-gray-500 mt-1">
+                作成日時: {formatDate(post.createdAt)}
               </p>
-              <button 
-                onClick={() => handleDelete(post.id)}
-                className="text-red-500 hover:text-red-700"
-              >
-                削除
-              </button>
             </div>
-            
-            {post.image && (
-              <img 
-                src={post.image || "/placeholder.svg"} 
-                alt="投稿画像" 
-                className="w-full h-40 object-cover rounded-lg mb-2" 
-              />
-            )}
-            
-            {post.caption && (
-              <p className="text-gray-700">{post.caption}</p>
-            )}
-            
-            <p className="text-xs text-gray-500 mt-2">
-              作成日時: {formatDate(post.createdAt)}
-            </p>
-          </div>
-        ))}
+          );
+        })}
       </div>
       
       <button 
         onClick={fetchPosts}
-        className="mt-4 w-full bg-blue-500 text-white rounded-lg py-2"
+        className="mt-3 w-full bg-blue-500 text-white rounded-lg py-2 text-sm"
       >
         更新
       </button>
