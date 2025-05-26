@@ -249,7 +249,7 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
   }
 
   return (
-    <div className="max-w-md mx-auto bg-white h-screen flex flex-col">
+    <div className="max-w-md mx-auto bg-white min-h-screen flex flex-col pb-20">
       {/* ヘッダー */}
       <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100 flex-shrink-0">
         <h1 className="text-lg font-bold">オフライン予約投稿</h1>
@@ -410,7 +410,7 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
       </div>
 
       {/* 固定ボタンエリア */}
-      <div className="border-t border-gray-200 px-4 pt-3 pb-8 bg-white flex-shrink-0">
+      <div className="border-t border-gray-200 px-4 pt-4 pb-12 bg-white flex-shrink-0">
         <button
           className="w-full bg-[#f47458] text-white rounded-lg py-3 text-base font-medium disabled:opacity-50"
           onClick={handleSave}
@@ -421,9 +421,6 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
 
         {/* 状況説明テキスト */}
         <p className="text-xs text-gray-500 text-center mt-2">{getStatusText()}</p>
-
-        {/* ホームインジケーター */}
-        <div className="h-1 w-20 bg-black rounded-full mx-auto mt-3"></div>
       </div>
       {/* Toasterコンポーネントを追加 */}
       <Toaster />
