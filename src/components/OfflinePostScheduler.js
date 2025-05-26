@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { savePost } from "../utils/indexedDB"
 import toast, { Toaster } from "react-hot-toast"
 
@@ -11,8 +11,25 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
   const [caption, setCaption] = useState("")
   const [scheduledDateTime, setScheduledDateTime] = useState("")
   const [postingOption, setPostingOption] = useState("whenConnected")
+  const [viewportHeight, setViewportHeight] = useState(0)
   const now = new Date()
   const [showLimitations, setShowLimitations] = useState(false)
+
+  // iPhone用のビューポート高さを取得
+  useEffect(() => {
+    const updateViewportHeight = () => {
+      setViewportHeight(window.innerHeight)
+    }
+
+    updateViewportHeight()
+    window.addEventListener("resize", updateViewportHeight)
+    window.addEventListener("orientationchange", updateViewportHeight)
+
+    return () => {
+      window.removeEventListener("resize", updateViewportHeight)
+      window.removeEventListener("orientationchange", updateViewportHeight)
+    }
+  }, [])
 
   // 現在の日時をYYYY-MM-DDThh:mm形式で取得（入力の最小値として使用）
   const minDateTime = new Date(now.getTime() + 15 * 60 * 1000).toISOString().slice(0, 16) // 15分後
@@ -248,10 +265,16 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
     }
   }
 
+  const headerHeight = 60
+  const footerHeight = 180 // 120から140に増加
+
   return (
-    <div className="max-w-md mx-auto bg-white min-h-screen flex flex-col pb-20">
-      {/* ヘッダー */}
-      <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100 flex-shrink-0">
+    <div className="w-full max-w-md mx-auto bg-white relative" style={{ height: viewportHeight || "100vh" }}>
+      {/* ヘッダー - 固定 */}
+      <div
+        className="absolute top-0 left-0 right-0 z-10 flex justify-between items-center px-4 py-3 border-b border-gray-100 bg-white"
+        style={{ height: headerHeight }}
+      >
         <h1 className="text-lg font-bold">オフライン予約投稿</h1>
         <div className="w-5 h-5">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
@@ -263,8 +286,16 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
       </div>
 
       {/* スクロール可能なコンテンツエリア */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-4 space-y-4 pb-6">
+      <div
+        className="absolute left-0 right-0 overflow-y-auto"
+        style={{
+          top: headerHeight,
+          bottom: footerHeight,
+          WebkitOverflowScrolling: "touch",
+          overscrollBehavior: "contain",
+        }}
+      >
+        <div className="p-4 space-y-4">
           {/* 画像アップロードエリア */}
           <label
             htmlFor="image-upload"
@@ -305,8 +336,9 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
               placeholder="キャプションを入力... (ハッシュタグも含めて)"
               value={caption}
               onChange={handleCaptionChange}
-              className="w-full border border-gray-200 rounded-lg p-3 text-sm resize-none h-14"
+              className="w-full border border-gray-200 rounded-lg p-3 text-sm resize-none h-32"
               maxLength={2200}
+              style={{ WebkitAppearance: "none" }}
             />
             {/* キャプション制限情報 */}
             <div className="flex justify-between text-xs mt-1">
@@ -385,6 +417,7 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
                     min={minDateTime}
                     max={maxDateTime}
                     className="w-full border border-gray-200 rounded-lg p-2 text-sm"
+                    style={{ WebkitAppearance: "none" }}
                   />
                   <p className="text-xs text-gray-500 mt-1">※ 15分以上先〜75日以内で設定してください</p>
                 </div>
@@ -406,11 +439,17 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
 
           {/* エラーメッセージ */}
           {saveError && <div className="text-red-500 text-sm">{saveError}</div>}
+
+          {/* 追加のスペース（スクロール確認用） */}
+          <div className="h-20"></div>
         </div>
       </div>
 
       {/* 固定ボタンエリア */}
-      <div className="border-t border-gray-200 px-4 pt-4 pb-12 bg-white flex-shrink-0">
+      <div
+        className="absolute bottom-0 left-0 right-0 border-t border-gray-200 px-4 pt-4 pb-16 bg-white shadow-lg"
+        style={{ height: footerHeight }}
+      >
         <button
           className="w-full bg-[#f47458] text-white rounded-lg py-3 text-base font-medium disabled:opacity-50"
           onClick={handleSave}
@@ -421,7 +460,14 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
 
         {/* 状況説明テキスト */}
         <p className="text-xs text-gray-500 text-center mt-2">{getStatusText()}</p>
+
+        {/* タブエリア */}
+        <div className="flex justify-center space-x-8 mt-4 pb-4">
+          <button className="text-xs text-blue-600 font-medium">新規投稿</button>
+          <button className="text-xs text-gray-500">保存済み</button>
+        </div>
       </div>
+
       {/* Toasterコンポーネントを追加 */}
       <Toaster />
     </div>
