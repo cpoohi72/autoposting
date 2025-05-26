@@ -99,7 +99,7 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
   const handleSave = async () => {
     // バリデーション
     if (!selectedImage) {
-      toast.error("📷 画像を選択してください", {
+      toast.error("画像を選択してください", {
         duration: 3000,
         position: "top-center",
       })
@@ -112,7 +112,7 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
 
     // キャプションの制限チェック
     if (captionStats.isCharLimitExceeded) {
-      toast.error("📝 キャプションが2,200文字を超えています", {
+      toast.error("キャプションが2,200文字を超えています", {
         duration: 3000,
         position: "top-center",
       })
@@ -125,7 +125,7 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
 
     // 日時指定が選択されているが日時が設定されていない場合
     if (postingOption === "specificTime" && !scheduledDateTime) {
-      toast.error("⏰ 投稿日時を指定してください", {
+      toast.error("投稿日時を指定してください", {
         duration: 3000,
         position: "top-center",
       })
@@ -178,7 +178,7 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
           await new Promise((resolve) => setTimeout(resolve, 2000))
 
           // トースト通知で投稿完了を知らせる
-          toast.success("🎉 投稿が完了しました！", {
+          toast.success("投稿が完了しました！", {
             duration: 4000,
             position: "top-center",
             style: {
@@ -217,7 +217,7 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
       if (postingOption === "specificTime") {
         const date = new Date(scheduledDateTime)
         message = `投稿が予約されました（${date.toLocaleString("ja-JP")}）`
-        toast.success("📅 予約投稿が設定されました！", {
+        toast.success("予約投稿が設定されました！", {
           duration: 4000,
           position: "top-center",
         })
@@ -225,13 +225,13 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
         message = isOnline
           ? "投稿が保存されました"
           : "オフラインのため投稿を保存しました。オンライン時に自動投稿されます"
-        toast.success("💾 投稿が保存されました", {
+        toast.success("投稿が保存されました", {
           duration: 4000,
           position: "top-center",
         })
       } else {
         message = "下書きが保存されました"
-        toast.success("📝 下書きが保存されました", {
+        toast.success("下書きが保存されました", {
           duration: 4000,
           position: "top-center",
         })
@@ -266,7 +266,7 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
   }
 
   const headerHeight = 60
-  const footerHeight = 180 // 120から140に増加
+  const footerHeight = 180
 
   return (
     <div className="w-full max-w-md mx-auto bg-white relative" style={{ height: viewportHeight || "100vh" }}>
@@ -299,17 +299,27 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
           {/* 画像アップロードエリア */}
           <label
             htmlFor="image-upload"
-            className="border border-gray-200 rounded-lg bg-gray-50 flex flex-col items-center justify-center p-4 h-28 cursor-pointer"
+            className="border border-gray-200 rounded-lg bg-gray-50 flex flex-col items-center justify-center p-4 cursor-pointer"
+            style={{ minHeight: selectedImage ? "auto" : "112px" }}
           >
             {selectedImage ? (
-              <img
-                src={selectedImage || "/placeholder.svg"}
-                alt="選択された画像"
-                className="max-h-full max-w-full object-contain"
-              />
+              <div className="w-full">
+                <img
+                  src={selectedImage || "/placeholder.svg"}
+                  alt="選択された画像"
+                  className="w-full h-auto object-contain rounded-lg"
+                  style={{
+                    minHeight: "200px",
+                    maxHeight: "400px",
+                  }}
+                />
+                <p className="text-blue-700 text-xs font-medium text-center mt-3 py-2 px-4 bg-blue-50 rounded-lg">
+                  タップして画像を変更
+                </p>
+              </div>
             ) : (
               <>
-                <div className="w-10 h-10 mb-1 text-gray-300">
+                <div className="w-12 h-12 mb-2 text-gray-300">
                   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
                     <path
                       d="M4 6C4 4.89543 4.89543 4 6 4H18C19.1046 4 20 4.89543 20 6V18C20 19.1046 19.1046 20 18 20H6C4.89543 20 4 19.1046 4 18V6Z"
@@ -324,7 +334,8 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
                     <path d="M19 14L16 11L9 18" stroke="currentColor" strokeWidth="1.5" />
                   </svg>
                 </div>
-                <p className="text-blue-700 text-xs font-medium">写真を選択</p>
+                <p className="text-blue-700 text-sm font-medium">写真を選択</p>
+                <p className="text-gray-500 text-xs mt-1">JPG、PNG対応（最大30MB）</p>
               </>
             )}
             <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" id="image-upload" />
@@ -357,7 +368,7 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
               className="w-full p-3 text-left flex items-center justify-between bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
               onClick={() => setShowLimitations(!showLimitations)}
             >
-              <span className="text-sm font-medium text-gray-700">📝 Instagram投稿の制限事項</span>
+              <span className="text-sm font-medium text-gray-700">Instagram投稿の制限事項</span>
               <svg
                 className={`w-4 h-4 text-gray-500 transition-transform ${showLimitations ? "rotate-180" : ""}`}
                 fill="none"
