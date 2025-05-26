@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { savePost } from "../utils/indexedDB"
+import toast, { Toaster } from "react-hot-toast"
 
 const OfflinePostScheduler = ({ isOnline, setNotification }) => {
   const [saveError, setSaveError] = useState(null)
@@ -11,22 +12,19 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
   const [scheduledDateTime, setScheduledDateTime] = useState("")
   const [postingOption, setPostingOption] = useState("whenConnected")
   const now = new Date()
+  const [showLimitations, setShowLimitations] = useState(false)
 
   // 現在の日時をYYYY-MM-DDThh:mm形式で取得（入力の最小値として使用）
   const minDateTime = new Date(now.getTime() + 15 * 60 * 1000).toISOString().slice(0, 16) // 15分後
   const maxDateTime = new Date(now.getTime() + 75 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16) // 75日後
 
-  // キャプションの文字数とハッシュタグの数を計算する関数
+  // キャプションの文字数を計算する関数（ハッシュタグカウントを削除）
   const calculateCaptionStats = (text) => {
     const charCount = text.length
-    const hashtagCount = (text.match(/#/g) || []).length
     const isCharLimitExceeded = charCount > 2200
-    const isHashtagLimitExceeded = hashtagCount > 30
     return {
       charCount,
-      hashtagCount,
       isCharLimitExceeded,
-      isHashtagLimitExceeded,
     }
   }
 
@@ -84,6 +82,10 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
   const handleSave = async () => {
     // バリデーション
     if (!selectedImage) {
+      toast.error("📷 画像を選択してください", {
+        duration: 3000,
+        position: "top-center",
+      })
       setNotification({
         type: "error",
         message: "画像を選択してください",
@@ -93,6 +95,10 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
 
     // キャプションの制限チェック
     if (captionStats.isCharLimitExceeded) {
+      toast.error("📝 キャプションが2,200文字を超えています", {
+        duration: 3000,
+        position: "top-center",
+      })
       setNotification({
         type: "error",
         message: "キャプションが2,200文字を超えています",
@@ -100,16 +106,12 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
       return
     }
 
-    if (captionStats.isHashtagLimitExceeded) {
-      setNotification({
-        type: "error",
-        message: "ハッシュタグが30個を超えています",
-      })
-      return
-    }
-
     // 日時指定が選択されているが日時が設定されていない場合
     if (postingOption === "specificTime" && !scheduledDateTime) {
+      toast.error("⏰ 投稿日時を指定してください", {
+        duration: 3000,
+        position: "top-center",
+      })
       setNotification({
         type: "error",
         message: "投稿日時を指定してください",
@@ -158,6 +160,17 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
           // 実際の投稿処理をシミュレート
           await new Promise((resolve) => setTimeout(resolve, 2000))
 
+          // トースト通知で投稿完了を知らせる
+          toast.success("🎉 投稿が完了しました！", {
+            duration: 4000,
+            position: "top-center",
+            style: {
+              background: "#10B981",
+              color: "#fff",
+              fontWeight: "bold",
+            },
+          })
+
           setNotification({
             type: "success",
             message: "投稿が完了しました",
@@ -172,6 +185,10 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
         } catch (error) {
           console.error("投稿中にエラーが発生しました:", error)
           // エラーの場合は保存して後で投稿
+          toast.error("❌ 投稿に失敗しました", {
+            duration: 4000,
+            position: "top-center",
+          })
         }
       }
 
@@ -183,12 +200,24 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
       if (postingOption === "specificTime") {
         const date = new Date(scheduledDateTime)
         message = `投稿が予約されました（${date.toLocaleString("ja-JP")}）`
+        toast.success("📅 予約投稿が設定されました！", {
+          duration: 4000,
+          position: "top-center",
+        })
       } else if (postingOption === "whenConnected") {
         message = isOnline
           ? "投稿が保存されました"
           : "オフラインのため投稿を保存しました。オンライン時に自動投稿されます"
+        toast.success("💾 投稿が保存されました", {
+          duration: 4000,
+          position: "top-center",
+        })
       } else {
         message = "下書きが保存されました"
+        toast.success("📝 下書きが保存されました", {
+          duration: 4000,
+          position: "top-center",
+        })
       }
 
       setNotification({
@@ -204,6 +233,12 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
     } catch (error) {
       console.error("投稿の保存中にエラーが発生しました:", error)
       setSaveError("投稿の処理に失敗しました。もう一度お試しください。")
+
+      toast.error("❌ 投稿の処理に失敗しました", {
+        duration: 4000,
+        position: "top-center",
+      })
+
       setNotification({
         type: "error",
         message: "投稿の処理に失敗しました。もう一度お試しください。",
@@ -279,23 +314,48 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
                 <span className={captionStats.isCharLimitExceeded ? "text-red-500" : ""}>
                   {captionStats.charCount}/2,200文字
                 </span>
-                {captionStats.hashtagCount > 0 && (
-                  <span className={`ml-2 ${captionStats.isHashtagLimitExceeded ? "text-red-500" : ""}`}>
-                    ハッシュタグ: {captionStats.hashtagCount}/30個
-                  </span>
-                )}
               </div>
             </div>
           </div>
 
-          {/* Instagram制限事項の表示 */}
-          <div className="p-2 bg-blue-50 rounded-lg">
-            <p className="text-xs text-blue-800 font-medium mb-1">📝 Instagram投稿の制限事項</p>
-            <ul className="text-xs text-blue-700 space-y-0.5">
-              <li>• キャプション: 最大2,200文字</li>
-              <li>• ハッシュタグ: 最大30個</li>
-              <li>• 予約投稿: 15分以上先〜75日以内</li>
-            </ul>
+          {/* Instagram制限事項の表示（アコーディオン化） */}
+          <div className="border border-gray-200 rounded-lg">
+            <button
+              type="button"
+              className="w-full p-3 text-left flex items-center justify-between bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+              onClick={() => setShowLimitations(!showLimitations)}
+            >
+              <span className="text-sm font-medium text-gray-700">📝 Instagram投稿の制限事項</span>
+              <svg
+                className={`w-4 h-4 text-gray-500 transition-transform ${showLimitations ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {showLimitations && (
+              <div className="p-3 border-t border-gray-200 bg-blue-50">
+                <ul className="text-xs text-blue-700 space-y-1">
+                  <li>
+                    • <strong>キャプション:</strong> 最大2,200文字
+                  </li>
+                  <li>
+                    • <strong>ハッシュタグ:</strong> 最大30個（推奨は5-10個）
+                  </li>
+                  <li>
+                    • <strong>予約投稿:</strong> 15分以上先〜75日以内
+                  </li>
+                  <li>
+                    • <strong>画像形式:</strong> JPG、PNG対応
+                  </li>
+                  <li>
+                    • <strong>画像サイズ:</strong> 最大30MB
+                  </li>
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* 投稿時刻オプション */}
@@ -365,6 +425,8 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
         {/* ホームインジケーター */}
         <div className="h-1 w-20 bg-black rounded-full mx-auto mt-3"></div>
       </div>
+      {/* Toasterコンポーネントを追加 */}
+      <Toaster />
     </div>
   )
 }
