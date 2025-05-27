@@ -92,7 +92,7 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
         return "オンライン時に自動投稿されます"
       }
     }
-    return "下書きとして保存されます"
+    return "※日時を指定してください" 
   }
 
   // 保存/投稿ハンドラー
@@ -103,10 +103,6 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
         duration: 3000,
         position: "top-center",
       })
-      setNotification({
-        type: "error",
-        message: "画像を選択してください",
-      })
       return
     }
 
@@ -116,10 +112,6 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
         duration: 3000,
         position: "top-center",
       })
-      setNotification({
-        type: "error",
-        message: "キャプションが2,200文字を超えています",
-      })
       return
     }
 
@@ -128,10 +120,6 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
       toast.error("投稿日時を指定してください", {
         duration: 3000,
         position: "top-center",
-      })
-      setNotification({
-        type: "error",
-        message: "投稿日時を指定してください",
       })
       return
     }
@@ -229,12 +217,12 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
           duration: 4000,
           position: "top-center",
         })
-      } else {
-        message = "下書きが保存されました"
-        toast.success("下書きが保存されました", {
-          duration: 4000,
-          position: "top-center",
-        })
+      // } else {
+      //   message = "下書きが保存されました"
+      //   toast.success("下書きが保存されました", {
+      //     duration: 4000,
+      //     position: "top-center",
+      //   })
       }
 
       setNotification({
@@ -256,10 +244,10 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
         position: "top-center",
       })
 
-      setNotification({
-        type: "error",
-        message: "投稿の処理に失敗しました。もう一度お試しください。",
-      })
+      // setNotification({
+      //   type: "error",
+      //   message: "投稿の処理に失敗しました。もう一度お試しください。",
+      // })
     } finally {
       setIsSaving(false)
     }
