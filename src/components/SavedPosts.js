@@ -15,7 +15,7 @@ function SavedPosts({ isOnline, setNotification }) {
       
       const filteredPosts = showPosted 
         ? fetchedPosts 
-        : fetchedPosts.filter(post => post.status !== POST_STATUS.POSTED);
+        : fetchedPosts.filter(post => post.post_status !== POST_STATUS.POSTED);
       
       setPosts(filteredPosts);
       setError(null);
@@ -112,32 +112,32 @@ function SavedPosts({ isOnline, setNotification }) {
       {/* スクロール可能な投稿リスト */}
       <div className="flex-1 overflow-y-auto space-y-3">
         {posts.map((post) => {
-          const statusInfo = getStatusLabel(post.status);
+          const statusInfo = getStatusLabel(post.post_status);
           
           return (
-            <div key={post.id} className="border rounded-lg p-3 shadow-sm">
+            <div key={post.post_id} className="border rounded-lg p-3 shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <span className={`text-xs px-2 py-1 rounded-full ${statusInfo.className}`}>
                     {statusInfo.label}
                   </span>
                   <p className="font-medium mt-1 text-sm">
-                    {post.postingOption === 'specificTime' 
-                      ? `予定日時: ${formatDate(post.scheduledDateTime)}` 
+                    {post.post_date
+                      ? `予定日時: ${formatDate(post.post_date)}` 
                       : 'インターネット接続時に投稿'}
                   </p>
                 </div>
                 <button 
-                  onClick={() => handleDelete(post.id)}
+                  onClick={() => handleDelete(post.post_id)}
                   className="text-red-500 hover:text-red-700 text-sm"
                 >
                   削除
                 </button>
               </div>
               
-              {post.image && (
+              {post.image_url && (
                 <img 
-                  src={post.image || "/placeholder.svg"} 
+                  src={post.image_url || "/placeholder.svg"} 
                   alt="投稿画像" 
                   className="w-full h-24 object-cover rounded-lg mb-2" 
                 />
@@ -148,7 +148,7 @@ function SavedPosts({ isOnline, setNotification }) {
               )}
               
               <p className="text-xs text-gray-500 mt-1">
-                作成日時: {formatDate(post.createdAt)}
+                作成日時: {formatDate(post.created_at)}
               </p>
             </div>
           );
