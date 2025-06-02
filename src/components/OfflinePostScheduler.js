@@ -458,7 +458,7 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
         </button>
 
         {/* 状況説明テキスト */}
-        <p className="text-xs text-gray-500 text-center mt-2">{getStatusText()}</p>
+        <p className="text-xs text-gray-500 text-center mt-3">{getStatusText()}</p>
 
         {/* タブエリア */}
         <div className="flex justify-center space-x-8 mt-4 pb-4">
