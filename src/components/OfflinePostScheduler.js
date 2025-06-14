@@ -4,16 +4,21 @@ import { useState, useEffect } from "react"
 import { savePost } from "../utils/indexedDB"
 import toast, { Toaster } from "react-hot-toast"
 
-const OfflinePostScheduler = ({ isOnline, setNotification }) => {
+const OfflinePostScheduler = ({ isOnline = true, setNotification = () => {} }) => {
   const [saveError, setSaveError] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [selectedImage, setSelectedImage] = useState(null)
   const [caption, setCaption] = useState("")
-  const [scheduledDateTime, setScheduledDateTime] = useState("")
-  const [postingOption, setPostingOption] = useState("whenConnected")
+  const [post_date, setPost_date] = useState("")
+  const [network_flag, setNetwork_flag] = useState(1) // 1:接続時に投稿、0:日時指定
+  const [post_status, setPost_status] = useState("PENDING") // 投稿ステータス
+  const [delete_flag, setDelete_flag] = useState(0) // 削除フラグ
+  const [created_at, setCreated_at] = useState(new Date().toISOString()) // 作成日時
+  const [deleted_at, setDeleted_at] = useState(null) // 削除日時
   const [viewportHeight, setViewportHeight] = useState(0)
-  const now = new Date()
   const [showLimitations, setShowLimitations] = useState(false)
+
+  const now = new Date()
 
   // iPhone用のビューポート高さを取得
   useEffect(() => {
@@ -35,7 +40,7 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
   const minDateTime = new Date(now.getTime() + 15 * 60 * 1000).toISOString().slice(0, 16) // 15分後
   const maxDateTime = new Date(now.getTime() + 75 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16) // 75日後
 
-  // キャプションの文字数を計算する関数（ハッシュタグカウントを削除）
+  // キャプションの文字数を計算する関数
   const calculateCaptionStats = (text) => {
     const charCount = text.length
     const isCharLimitExceeded = charCount > 2200
@@ -56,21 +61,21 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
 
   // 画像選択ハンドラー
   const handleImageChange = (e) => {
-    const file = e.target.files[0]
+    const file = e.target.files?.[0]
     if (file) {
       const reader = new FileReader()
-      reader.onload = (e) => {
+      reader.onload= (e) => {
         setSelectedImage(e.target.result)
-      }
+      }   
       reader.readAsDataURL(file)
     }
   }
 
   // ボタンのテキストを決定する関数
   const getButtonText = () => {
-    if (postingOption === "specificTime") {
+    if (network_flag === 0) {
       return "予約投稿"
-    } else if (postingOption === "whenConnected") {
+    } else if (network_flag === 1) {
       if (isOnline) {
         return "投稿する"
       } else {
@@ -82,90 +87,103 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
 
   // 状況説明テキストを決定する関数
   const getStatusText = () => {
-    if (postingOption === "specificTime" && scheduledDateTime) {
-      const date = new Date(scheduledDateTime)
+    if (network_flag === 0 && post_date) {
+      const date = new Date(post_date)
       return `${date.toLocaleString("ja-JP")}に投稿予定`
-    } else if (postingOption === "whenConnected") {
+    } else if (network_flag === 1) {
       if (isOnline) {
         return "すぐに投稿されます"
       } else {
         return "オンライン時に自動投稿されます"
       }
     }
-    return "※日時を指定してください" 
+    return "※日時を指定してください"
   }
 
   // 保存/投稿ハンドラー
   const handleSave = async () => {
-    // バリデーション
-    if (!selectedImage) {
-      toast.error("画像を選択してください", {
-        duration: 3000,
-        position: "top-center",
-      })
-      return
-    }
-
-    // キャプションの制限チェック
-    if (captionStats.isCharLimitExceeded) {
-      toast.error("キャプションが2,200文字を超えています", {
-        duration: 3000,
-        position: "top-center",
-      })
-      return
-    }
-
-    // 日時指定が選択されているが日時が設定されていない場合
-    if (postingOption === "specificTime" && !scheduledDateTime) {
-      toast.error("投稿日時を指定してください", {
-        duration: 3000,
-        position: "top-center",
-      })
-      return
-    }
-
-    // 日時指定の制限チェック
-    if (postingOption === "specificTime" && scheduledDateTime) {
-      const selectedTime = new Date(scheduledDateTime)
-      const minTime = new Date(now.getTime() + 15 * 60 * 1000)
-      const maxTime = new Date(now.getTime() + 75 * 24 * 60 * 60 * 1000)
-
-      if (selectedTime < minTime) {
-        setNotification({
-          type: "error",
-          message: "予約時刻は15分以上先に設定してください",
-        })
-        return
-      }
-
-      if (selectedTime > maxTime) {
-        setNotification({
-          type: "error",
-          message: "予約時刻は75日以内に設定してください",
-        })
-        return
-      }
-    }
-
     try {
       setIsSaving(true)
       setSaveError(null)
 
+      // バリデーション
+      if (!selectedImage) {
+        toast.error("画像を選択してください", {
+          duration: 3000,
+          position: "top-center",
+        })
+        return
+      }
+
+      // 画像データの詳細チェック
+      if (!selectedImage.startsWith("data:image/")) {
+        console.error("無効な画像データ形式:", selectedImage.substring(0, 50))
+        toast.error("無効な画像データです", {
+          duration: 3000,
+          position: "top-center",
+        })
+        return
+      }
+
+      // キャプションの制限チェック
+      if (captionStats.isCharLimitExceeded) {
+        toast.error("キャプションが2,200文字を超えています", {
+          duration: 3000,
+          position: "top-center",
+        })
+        return
+      }
+
+      // 日時指定が選択されているが日時が設定されていない場合
+      if (network_flag === 0 && !post_date) {
+        toast.error("投稿日時を指定してください", {
+          duration: 3000,
+          position: "top-center",
+        })
+        return
+      }
+
+      // 日時指定の制限チェック
+      if (network_flag === 0 && post_date) {
+        const selectedTime = new Date(post_date)
+        const minTime = new Date(now.getTime() + 15 * 60 * 1000)
+        const maxTime = new Date(now.getTime() + 75 * 24 * 60 * 60 * 1000)
+
+        if (selectedTime < minTime) {
+          setNotification({
+            type: "error",
+            message: "予約時刻は15分以上先に設定してください",
+          })
+          return
+        }
+
+        if (selectedTime > maxTime) {
+          setNotification({
+            type: "error",
+            message: "予約時刻は75日以内に設定してください",
+          })
+          return
+        }
+      }
+
       // 投稿データを作成
       const postData = {
-        image: selectedImage,
+        image_url: selectedImage, // Base64画像データ
         caption,
-        postingOption,
-        scheduledDateTime: postingOption === "specificTime" ? scheduledDateTime : null,
+        post_date: network_flag === 0 ? post_date : null,
+        network_flag,
+        post_status,
+        delete_flag,
+        created_at,
+        deleted_at,
       }
 
       // 即座に投稿する場合（オンライン + インターネット接続時に投稿）
-      if (isOnline && postingOption === "whenConnected") {
+      if (isOnline && network_flag === 1) {
         try {
           // 実際の投稿処理をシミュレート
           await new Promise((resolve) => setTimeout(resolve, 2000))
 
-          // トースト通知で投稿完了を知らせる
           toast.success("投稿が完了しました！", {
             duration: 4000,
             position: "top-center",
@@ -184,13 +202,14 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
           // フォームをリセット
           setSelectedImage(null)
           setCaption("")
-          setScheduledDateTime("")
+          setPost_date("")
           setCaptionStats(calculateCaptionStats(""))
           return
         } catch (error) {
           console.error("投稿中にエラーが発生しました:", error)
           // エラーの場合は保存して後で投稿
-          toast.error("❌ 投稿に失敗しました", {
+          postData.post_status = "FAILED"
+          toast.error("投稿に失敗しました", {
             duration: 4000,
             position: "top-center",
           })
@@ -200,54 +219,48 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
       // IndexedDBに保存
       const postId = await savePost(postData)
 
-      // 保存後の処理
-      let message = ""
-      if (postingOption === "specificTime") {
-        const date = new Date(scheduledDateTime)
-        message = `投稿が予約されました（${date.toLocaleString("ja-JP")}）`
-        toast.success("予約投稿が設定されました！", {
-          duration: 4000,
-          position: "top-center",
+      // 保存後の検証
+      if (postId) {
+
+        // 保存後の処理
+        let message = ""
+        if (network_flag === 0) {
+          const date = new Date(post_date)
+          toast.success("予約投稿が設定されました！", {
+            duration: 4000,
+            position: "top-center",
+          })
+        } else if (network_flag === 1) {
+          message = isOnline
+            ? "投稿が保存されました"
+            : "オフラインのため投稿を保存しました。オンライン時に自動投稿されます"
+          toast.success("投稿が保存されました", {
+            duration: 4000,
+            position: "top-center",
+          })
+        }
+
+        setNotification({
+          type: "success",
+          message: message,
         })
-      } else if (postingOption === "whenConnected") {
-        message = isOnline
-          ? "投稿が保存されました"
-          : "オフラインのため投稿を保存しました。オンライン時に自動投稿されます"
-        toast.success("投稿が保存されました", {
-          duration: 4000,
-          position: "top-center",
-        })
-      // } else {
-      //   message = "下書きが保存されました"
-      //   toast.success("下書きが保存されました", {
-      //     duration: 4000,
-      //     position: "top-center",
-      //   })
+
+        // フォームをリセット
+        setSelectedImage(null)
+        setCaption("")
+        setPost_date("")
+        setCaptionStats(calculateCaptionStats(""))
+      } else {
+        throw new Error("保存IDが取得できませんでした")
       }
-
-      setNotification({
-        type: "success",
-        message: message,
-      })
-
-      // フォームをリセット
-      setSelectedImage(null)
-      setCaption("")
-      setScheduledDateTime("")
-      setCaptionStats(calculateCaptionStats(""))
     } catch (error) {
       console.error("投稿の保存中にエラーが発生しました:", error)
       setSaveError("投稿の処理に失敗しました。もう一度お試しください。")
 
-      toast.error("❌ 投稿の処理に失敗しました", {
+      toast.error("投稿の処理に失敗しました", {
         duration: 4000,
         position: "top-center",
       })
-
-      // setNotification({
-      //   type: "error",
-      //   message: "投稿の処理に失敗しました。もう一度お試しください。",
-      // })
     } finally {
       setIsSaving(false)
     }
@@ -339,7 +352,6 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
               maxLength={2200}
               style={{ WebkitAppearance: "none" }}
             />
-            {/* キャプション制限情報 */}
             <div className="flex justify-between text-xs mt-1">
               <div className="text-gray-500">
                 <span className={captionStats.isCharLimitExceeded ? "text-red-500" : ""}>
@@ -349,7 +361,7 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
             </div>
           </div>
 
-          {/* Instagram制限事項の表示（アコーディオン化） */}
+          {/* Instagram制限事項の表示 */}
           <div className="border border-gray-200 rounded-lg">
             <button
               type="button"
@@ -392,27 +404,25 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
           {/* 投稿時刻オプション */}
           <div>
             <h2 className="text-base font-bold mb-3">投稿時刻</h2>
-
             <div className="space-y-3">
               <div className="flex items-center">
                 <div
-                  className={`w-4 h-4 rounded-full border-2 border-gray-400 mr-3 flex items-center justify-center cursor-pointer ${postingOption === "specificTime" ? "border-blue-700" : ""}`}
-                  onClick={() => setPostingOption("specificTime")}
+                  className={`w-4 h-4 rounded-full border-2 border-gray-400 mr-3 flex items-center justify-center cursor-pointer ${network_flag === 0 ? "border-blue-700" : ""}`}
+                  onClick={() => setNetwork_flag(0)}
                 >
-                  {postingOption === "specificTime" && <div className="w-2 h-2 rounded-full bg-blue-700"></div>}
+                  {network_flag === 0 && <div className="w-2 h-2 rounded-full bg-blue-700"></div>}
                 </div>
-                <label className="text-sm cursor-pointer" onClick={() => setPostingOption("specificTime")}>
+                <label className="text-sm cursor-pointer" onClick={() => setNetwork_flag(0)}>
                   日時を指定
                 </label>
               </div>
 
-              {/* 日時を指定が選択された場合に表示 */}
-              {postingOption === "specificTime" && (
+              {network_flag === 0 && (
                 <div className="ml-7">
                   <input
                     type="datetime-local"
-                    value={scheduledDateTime}
-                    onChange={(e) => setScheduledDateTime(e.target.value)}
+                    value={post_date}
+                    onChange={(e) => setPost_date(e.target.value)}
                     min={minDateTime}
                     max={maxDateTime}
                     className="w-full border border-gray-200 rounded-lg p-2 text-sm"
@@ -424,12 +434,12 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
 
               <div className="flex items-center">
                 <div
-                  className={`w-4 h-4 rounded-full border-2 border-gray-400 mr-3 flex items-center justify-center cursor-pointer ${postingOption === "whenConnected" ? "border-blue-700" : ""}`}
-                  onClick={() => setPostingOption("whenConnected")}
+                  className={`w-4 h-4 rounded-full border-2 border-gray-400 mr-3 flex items-center justify-center cursor-pointer ${network_flag === 1 ? "border-blue-700" : ""}`}
+                  onClick={() => setNetwork_flag(1)}
                 >
-                  {postingOption === "whenConnected" && <div className="w-2 h-2 rounded-full bg-blue-700"></div>}
+                  {network_flag === 1 && <div className="w-2 h-2 rounded-full bg-blue-700"></div>}
                 </div>
-                <label className="text-sm cursor-pointer" onClick={() => setPostingOption("whenConnected")}>
+                <label className="text-sm cursor-pointer" onClick={() => setNetwork_flag(1)}>
                   インターネット接続時に投稿
                 </label>
               </div>
@@ -439,7 +449,6 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
           {/* エラーメッセージ */}
           {saveError && <div className="text-red-500 text-sm">{saveError}</div>}
 
-          {/* 追加のスペース（スクロール確認用） */}
           <div className="h-20"></div>
         </div>
       </div>
@@ -457,17 +466,14 @@ const OfflinePostScheduler = ({ isOnline, setNotification }) => {
           {isSaving ? "処理中..." : getButtonText()}
         </button>
 
-        {/* 状況説明テキスト */}
         <p className="text-xs text-gray-500 text-center mt-3">{getStatusText()}</p>
 
-        {/* タブエリア */}
         <div className="flex justify-center space-x-8 mt-4 pb-4">
           <button className="text-xs text-blue-600 font-medium">新規投稿</button>
           <button className="text-xs text-gray-500">保存済み</button>
         </div>
       </div>
 
-      {/* Toasterコンポーネントを追加 */}
       <Toaster />
     </div>
   )
