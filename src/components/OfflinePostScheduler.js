@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react"
 import { savePost } from "../utils/indexedDB"
 import toast, { Toaster } from "react-hot-toast"
+import {postToInstagram} from "../utils/instagramGraphAPI"
 
 const OfflinePostScheduler = ({ isOnline = true, setNotification = () => {} }) => {
   const [saveError, setSaveError] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [selectedImage, setSelectedImage] = useState(null)
+  const [image_url, setImage_url] = useState("")
   const [caption, setCaption] = useState("")
   const [post_date, setPost_date] = useState("")
   const [network_flag, setNetwork_flag] = useState(1) // 1:接続時に投稿、0:日時指定
@@ -182,22 +184,20 @@ const OfflinePostScheduler = ({ isOnline = true, setNotification = () => {} }) =
       if (isOnline && network_flag === 1) {
         try {
           // 実際の投稿処理をシミュレート
-          await new Promise((resolve) => setTimeout(resolve, 2000))
-
-          toast.success("投稿が完了しました！", {
-            duration: 4000,
-            position: "top-center",
-            style: {
-              background: "#10B981",
-              color: "#fff",
-              fontWeight: "bold",
-            },
-          })
-
-          setNotification({
-            type: "success",
-            message: "投稿が完了しました",
-          })
+          const response = await postToInstagram(postData.image_url, postData.caption)
+          if (!response || !response.success) {
+            throw new Error(response.error || "投稿に失敗しました")
+          }else{
+            toast.success("投稿が完了しました！", {
+              duration: 4000,
+              position: "top-center",
+              style: {
+                background: "#10B981",
+                color: "#fff",
+                fontWeight: "bold",
+              },
+            })
+          }
 
           // フォームをリセット
           setSelectedImage(null)
