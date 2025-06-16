@@ -1,6 +1,6 @@
 // Instagram API設定
-const instaBusinessId = process.env.NEXT_PUBLIC_INSTAGRAM_BUSINESS_ID || "17841474504264978"
-const accessToken = process.env.NEXT_PUBLIC_INSTAGRAM_ACCESS_TOKEN || "EAAbDJRdi8q8BO7s2ZAKanA7nZCqIMH2HH5wp71ys4qIbUngZBsr4X2gpVKxR0qnFmMcgEz8kMhOE4d6dTZAJNyh1butHvG3AXNICkWfQKX7PpKco3wWZBxkmigFJBzCHEDR5XJWihbQqgfxIGqWp6lOGSUaonyGw64lYPf62hXASk1JpH3MkEi10pif2UBaHK36bA"
+const instaBusinessId = process.env.REACT_APP_INSTAGRAM_BUSINESS_ID
+const accessToken = process.env.REACT_APP_INSTAGRAM_ACCESS_TOKEN
 
 /**
  * コンテナIDを取得する関数
