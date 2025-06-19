@@ -1,4 +1,6 @@
 import { uploadImageToS3 } from './s3Upload';
+// 署名付きURLを使用する場合は以下のインポートを使用
+// import { uploadImageToS3WithPresignedUrl as uploadImageToS3 } from './s3UploadWithPresignedUrl';
 import { updatePostImageAndStatus } from './indexedDB';
 
 // Instagram API設定
