@@ -282,3 +282,48 @@ export const getScheduledPosts = async () => {
     throw error
   }
 }
+
+/**
+ * 投稿のimage_urlとpost_statusを更新
+ * @param {number} postId - 投稿ID
+ * @param {string} imageUrl - 新しい画像URL（S3の公開URL）
+ * @param {string} status - 新しいステータス
+ */
+export const updatePostImageAndStatus = async (postId, imageUrl, status) => {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([STORE_NAME], "readwrite");
+      const store = transaction.objectStore(STORE_NAME);
+
+      const getRequest = store.get(postId);
+
+      getRequest.onsuccess = (event) => {
+        const post = event.target.result;
+        if (post) {
+          post.image_url = imageUrl;
+          post.post_status = status;
+          post.updated_at = new Date().toISOString();
+
+          const updateRequest = store.put(post);
+          updateRequest.onsuccess = () => {
+            console.log(`投稿ID ${postId} の画像URLとステータスを更新しました`);
+            resolve(post);
+          };
+          updateRequest.onerror = (error) => {
+            reject(`投稿の更新に失敗しました: ${error.target.error}`);
+          };
+        } else {
+          reject(`投稿ID ${postId} が見つかりません`);
+        }
+      };
+
+      getRequest.onerror = (error) => {
+        reject(`投稿の取得に失敗しました: ${error.target.error}`);
+      };
+    });
+  } catch (error) {
+    console.error("投稿の更新中にエラーが発生しました:", error);
+    throw error;
+  }
+};

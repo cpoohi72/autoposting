@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { savePost } from "../utils/indexedDB"
 import {postToInstagram} from "../utils/instagramGraphAPI"
+import { processInstagramPost } from "../utils/instagramGraphAPI"
 
 const OfflinePostScheduler = ({ isOnline = true, setNotification = () => {} }) => {
   const [saveError, setSaveError] = useState(null)
@@ -102,160 +103,248 @@ const OfflinePostScheduler = ({ isOnline = true, setNotification = () => {} }) =
   }
 
   // 保存/投稿ハンドラー
-  const handleSave = async () => {
+  // const handleSave = async () => {
+  //   try {
+  //     setIsSaving(true)
+  //     setSaveError(null)
+
+  //     // バリデーション
+  //     if (!image_url) {
+  //       setNotification({
+  //         type: "error",
+  //         message: "画像を選択してください",
+  //       })
+  //       return
+  //     }
+
+  //     // 画像データの詳細チェック
+  //     if (!image_url.startsWith("data:image/")) {
+  //       console.error("無効な画像データ形式:", image_url.substring(0, 50))
+  //       setNotification({
+  //         type: "error",
+  //         message: "無効な画像データです",
+  //       })
+  //       return
+  //     }
+
+  //     // キャプションの制限チェック
+  //     if (captionStats.isCharLimitExceeded) {
+  //       setNotification({
+  //         type: "error",
+  //         message: "キャプションが2,200文字を超えています",
+  //       })
+  //       return
+  //     }
+
+  //     // 日時指定が選択されているが日時が設定されていない場合
+  //     if (network_flag === 0 && !post_date) {
+  //       setNotification({
+  //         type: "error",
+  //         message: "投稿日時を指定してください",
+  //       })
+  //       return
+  //     }
+
+  //     // 日時指定の制限チェック
+  //     if (network_flag === 0 && post_date) {
+  //       const selectedTime = new Date(post_date)
+  //       const minTime = new Date(now.getTime() + 15 * 60 * 1000)
+  //       const maxTime = new Date(now.getTime() + 75 * 24 * 60 * 60 * 1000)
+
+  //       if (selectedTime < minTime) {
+  //         setNotification({
+  //           type: "error",
+  //           message: "予約時刻は15分以上先に設定してください",
+  //         })
+  //         return
+  //       }
+
+  //       if (selectedTime > maxTime) {
+  //         setNotification({
+  //           type: "error",
+  //           message: "予約時刻は75日以内に設定してください",
+  //         })
+  //         return
+  //       }
+  //     }
+
+  //     // 投稿データを作成
+  //     const postData = {
+  //       image_url, // Base64画像データ
+  //       caption,
+  //       post_date: network_flag === 0 ? post_date : null,
+  //       network_flag,
+  //       post_status,
+  //       delete_flag,
+  //       created_at,
+  //       updated_at,
+  //       deleted_at,
+  //     }
+
+  //     // 即座に投稿する場合（オンライン + インターネット接続時に投稿）
+  //     if (isOnline && network_flag === 1) {
+  //       try {
+  //         // 実際の投稿処理をシミュレート
+  //         const response = await postToInstagram(image_url, caption)
+  //         if (!response || !response.success) {
+  //           throw new Error(response.error || "投稿に失敗しました")
+  //         }else{
+  //           setNotification({
+  //             type: "success",
+  //             message: "投稿が完了しました！",
+  //           })
+  //         }
+
+  //         // フォームをリセット
+  //         setImage_url(null)
+  //         setCaption("")
+  //         setPost_date("")
+  //         setCaptionStats(calculateCaptionStats(""))
+  //         return
+  //       } catch (error) {
+  //         console.error("投稿中にエラーが発生しました:", error)
+  //         // エラーの場合は保存して後で投稿
+  //         setPost_status("FAILED")
+  //         setNotification({
+  //           type: "error",
+  //           message: "投稿に失敗しました",
+  //         })
+  //       }
+  //     }
+
+  //     // IndexedDBに保存
+  //     const postId = await savePost(postData)
+
+  //     // 保存後の検証
+  //     try {
+
+  //       // 保存後の処理
+  //       let message = ""
+  //       if (network_flag === 0) {
+  //         setNotification({
+  //           type: "success",
+  //           message: "予約投稿が設定されました！",
+  //         })
+  //       } else if (network_flag === 1) {
+  //         message = isOnline
+  //           ? "投稿が保存されました"
+  //           : "オフラインのため投稿を保存しました。オンライン時に自動投稿されます"
+  //         setNotification({
+  //           type: "success",
+  //           message: message,
+  //         })
+
+  //         // フォームをリセット
+  //         setImage_url(null)
+  //         setCaption("")
+  //         setPost_date(null)
+  //         setCaptionStats(calculateCaptionStats(""))
+  //       } else {
+  //         throw new Error("保存IDが取得できませんでした")
+  //       }
+  //     } catch (error) {
+  //     console.error("投稿の保存中にエラーが発生しました:", error)
+  //     setSaveError("投稿の処理に失敗しました。もう一度お試しください。")
+
+  //     setNotification({
+  //       type: "error",
+  //       message: "投稿の処理に失敗しました",
+  //     })
+  //   }
+  //   }catch(error){
+  //     console.error("投稿の保存中にエラーが発生しました:", error)
+  //   } finally {
+  //     setIsSaving(false)
+  //   }
+  // }
+
+const handleSave = async () => {
     try {
-      setIsSaving(true)
-      setSaveError(null)
+        setIsSaving(true);
+        setSaveError(null);
 
-      // バリデーション
-      if (!image_url) {
-        setNotification({
-          type: "error",
-          message: "画像を選択してください",
-        })
-        return
-      }
-
-      // 画像データの詳細チェック
-      if (!image_url.startsWith("data:image/")) {
-        console.error("無効な画像データ形式:", image_url.substring(0, 50))
-        setNotification({
-          type: "error",
-          message: "無効な画像データです",
-        })
-        return
-      }
-
-      // キャプションの制限チェック
-      if (captionStats.isCharLimitExceeded) {
-        setNotification({
-          type: "error",
-          message: "キャプションが2,200文字を超えています",
-        })
-        return
-      }
-
-      // 日時指定が選択されているが日時が設定されていない場合
-      if (network_flag === 0 && !post_date) {
-        setNotification({
-          type: "error",
-          message: "投稿日時を指定してください",
-        })
-        return
-      }
-
-      // 日時指定の制限チェック
-      if (network_flag === 0 && post_date) {
-        const selectedTime = new Date(post_date)
-        const minTime = new Date(now.getTime() + 15 * 60 * 1000)
-        const maxTime = new Date(now.getTime() + 75 * 24 * 60 * 60 * 1000)
-
-        if (selectedTime < minTime) {
-          setNotification({
-            type: "error",
-            message: "予約時刻は15分以上先に設定してください",
-          })
-          return
+        // バリデーション（既存のコード）
+        if (!image_url) {
+            // toast.error("画像を選択してください");
+            return;
         }
 
-        if (selectedTime > maxTime) {
-          setNotification({
-            type: "error",
-            message: "予約時刻は75日以内に設定してください",
-          })
-          return
-        }
-      }
+        // 投稿データを作成
+        const postData = {
+            image_url: image_url, // Base64画像データ
+            caption,
+            post_date: network_flag === 0 ? post_date : null,
+            network_flag,
+            post_status: "PENDING",
+            delete_flag: 0,
+            created_at: new Date().toISOString(),
+            deleted_at: null,
+        };
 
-      // 投稿データを作成
-      const postData = {
-        image_url, // Base64画像データ
-        caption,
-        post_date: network_flag === 0 ? post_date : null,
-        network_flag,
-        post_status,
-        delete_flag,
-        created_at,
-        updated_at,
-        deleted_at,
-      }
+        // まずIndexedDBに保存
+        const postId = await savePost(postData);
+        console.log("投稿をIndexedDBに保存しました。ID:", postId);
 
-      // 即座に投稿する場合（オンライン + インターネット接続時に投稿）
-      if (isOnline && network_flag === 1) {
-        try {
-          // 実際の投稿処理をシミュレート
-          const response = await postToInstagram(image_url, caption)
-          if (!response || !response.success) {
-            throw new Error(response.error || "投稿に失敗しました")
-          }else{
-            setNotification({
-              type: "success",
-              message: "投稿が完了しました！",
-            })
-          }
+        // オンライン + 即座投稿の場合
+        if (isOnline && network_flag === 1) {
+            try {
+                // 保存した投稿データを取得
+                const savedPost = { ...postData, post_id: postId };
 
-          // フォームをリセット
-          setImage_url(null)
-          setCaption("")
-          setPost_date("")
-          setCaptionStats(calculateCaptionStats(""))
-          return
-        } catch (error) {
-          console.error("投稿中にエラーが発生しました:", error)
-          // エラーの場合は保存して後で投稿
-          setPost_status("FAILED")
-          setNotification({
-            type: "error",
-            message: "投稿に失敗しました",
-          })
-        }
-      }
+                // Instagram投稿処理を実行
+                const response = await processInstagramPost(savedPost);
 
-      // IndexedDBに保存
-      const postId = await savePost(postData)
-
-      // 保存後の検証
-      try {
-
-        // 保存後の処理
-        let message = ""
-        if (network_flag === 0) {
-          setNotification({
-            type: "success",
-            message: "予約投稿が設定されました！",
-          })
-        } else if (network_flag === 1) {
-          message = isOnline
-            ? "投稿が保存されました"
-            : "オフラインのため投稿を保存しました。オンライン時に自動投稿されます"
-          setNotification({
-            type: "success",
-            message: message,
-          })
-
-          // フォームをリセット
-          setImage_url(null)
-          setCaption("")
-          setPost_date(null)
-          setCaptionStats(calculateCaptionStats(""))
+                if (response.success) {
+                    // toast.success("投稿が完了しました！", {
+                    //     duration: 4000,
+                    //     position: "top-center",
+                    //     style: {
+                    //         background: "#10B981",
+                    //         color: "#fff",
+                    //         fontWeight: "bold",
+                    //     },
+                    // });
+                } else {
+                    throw new Error(response.error);
+                }
+            } catch (error) {
+                console.error("投稿中にエラーが発生しました:", error);
+                // toast.error("投稿に失敗しました。後でリトライできます。", {
+                //     duration: 4000,
+                //     position: "top-center",
+                // });
+            }
         } else {
-          throw new Error("保存IDが取得できませんでした")
+            // オフラインまたは予約投稿の場合
+            if (network_flag === 0) {
+                // toast.success("予約投稿として保存されました", {
+                //     duration: 3000,
+                //     position: "top-center",
+                // });
+            } else {
+                // toast.success("オフライン投稿として保存されました", {
+                //     duration: 3000,
+                //     position: "top-center",
+                // });
+            }
         }
-      } catch (error) {
-      console.error("投稿の保存中にエラーが発生しました:", error)
-      setSaveError("投稿の処理に失敗しました。もう一度お試しください。")
 
-      setNotification({
-        type: "error",
-        message: "投稿の処理に失敗しました",
-      })
-    }
-    }catch(error){
-      console.error("投稿の保存中にエラーが発生しました:", error)
+        // フォームをリセット
+        setImage_url(null);
+        setCaption("");
+        setPost_date("");
+        setCaptionStats(calculateCaptionStats(""));
+
+    } catch (error) {
+        console.error("保存中にエラーが発生しました:", error);
+        // toast.error("保存に失敗しました", {
+        //     duration: 3000,
+        //     position: "top-center",
+        // });
     } finally {
-      setIsSaving(false)
+        setIsSaving(false);
     }
-  }
+};
 
   const headerHeight = 60
   const footerHeight = 180

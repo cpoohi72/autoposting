@@ -1,3 +1,6 @@
+import { uploadImageToS3 } from './s3Upload';
+import { updatePostImageAndStatus } from './indexedDB';
+
 // Instagram API設定
 const instaBusinessId = process.env.REACT_APP_INSTAGRAM_BUSINESS_ID
 const accessToken = process.env.REACT_APP_INSTAGRAM_ACCESS_TOKEN
@@ -127,48 +130,122 @@ export async function instagramApi(url, method, postData) {
 }
 
 /**
+ * 投稿処理（S3アップロード → Instagram投稿）
+ * @param {Object} postData - 投稿データ（IndexedDBから取得）
+ * @returns {Promise<Object>} - 投稿結果
+ */
+export async function processInstagramPost(postData) {
+    try {
+        console.log("Instagram投稿処理開始...", postData.post_id);
+
+        // 1. ステータスを「処理中」に更新
+        await updatePostImageAndStatus(postData.post_id, postData.image_url, "PROCESSING");
+
+        // 2. 画像がBase64データの場合、S3にアップロード
+        let imageUrl = postData.image_url;
+        if (postData.image_url.startsWith('data:image/')) {
+            console.log("ステップ1: S3に画像をアップロード中...");
+            imageUrl = await uploadImageToS3(postData.image_url, postData.post_id);
+
+            // IndexedDBのimage_urlを更新
+            await updatePostImageAndStatus(postData.post_id, imageUrl, "UPLOADING");
+            console.log("S3アップロード完了、IndexedDB更新済み");
+        }
+
+        // 3. Instagramコンテナを作成
+        console.log("ステップ2: Instagramコンテナ作成中...");
+        const containerResponse = await makeContainerAPI(imageUrl, postData.caption);
+
+        if (!containerResponse || !containerResponse.id) {
+            throw new Error("コンテナの作成に失敗しました");
+        }
+
+        const containerId = containerResponse.id;
+        console.log("コンテナ作成成功:", containerId);
+
+        // 4. 投稿を公開
+        console.log("ステップ3: 投稿公開中...");
+        const publishResponse = await publishPost(containerId);
+
+        if (!publishResponse || !publishResponse.id) {
+            throw new Error("投稿の公開に失敗しました");
+        }
+
+        console.log("投稿公開成功:", publishResponse.id);
+
+        // 5. ステータスを「完了」に更新
+        await updatePostImageAndStatus(postData.post_id, imageUrl, "POSTED");
+
+        return {
+            success: true,
+            postId: postData.post_id,
+            instagramPostId: publishResponse.id,
+            imageUrl: imageUrl,
+            message: "投稿が正常に完了しました",
+        };
+    } catch (error) {
+        console.error("Instagram投稿処理でエラーが発生しました:", error);
+
+        // エラー時はステータスを「失敗」に更新
+        try {
+            await updatePostImageAndStatus(postData.post_id, postData.image_url, "FAILED");
+        } catch (updateError) {
+            console.error("ステータス更新でエラーが発生しました:", updateError);
+        }
+
+        return {
+            success: false,
+            postId: postData.post_id,
+            error: error.message,
+            message: "投稿に失敗しました",
+        };
+    }
+}
+
+
+/**
  * 完全な投稿プロセス（コンテナ作成 → 公開）
  * @param {string} image_url - 画像のURL
  * @param {string} caption - 投稿のキャプション
  * @returns {Promise<Object>} - 投稿結果
  */
-export async function postToInstagram(image_url, caption) {
-    try {
-        console.log("Instagram投稿プロセス開始...")
+// export async function postToInstagram(image_url, caption) {
+//     try {
+//         console.log("Instagram投稿プロセス開始...")
 
-        // 1. コンテナを作成
-        console.log("ステップ1: コンテナ作成中...")
-        const containerResponse = await makeContainerAPI(image_url, caption)
+//         // 1. コンテナを作成
+//         console.log("ステップ1: コンテナ作成中...")
+//         const containerResponse = await makeContainerAPI(image_url, caption)
 
-        if (!containerResponse || !containerResponse.id) {
-            throw new Error("コンテナの作成に失敗しました")
-        }
+//         if (!containerResponse || !containerResponse.id) {
+//             throw new Error("コンテナの作成に失敗しました")
+//         }
 
-        const containerId = containerResponse.id
-        console.log("コンテナ作成成功:", containerId)
+//         const containerId = containerResponse.id
+//         console.log("コンテナ作成成功:", containerId)
 
-        // 2. 投稿を公開
-        console.log("ステップ2: 投稿公開中...")
-        const publishResponse = await publishPost(containerId)
+//         // 2. 投稿を公開
+//         console.log("ステップ2: 投稿公開中...")
+//         const publishResponse = await publishPost(containerId)
 
-        if (!publishResponse || !publishResponse.id) {
-            throw new Error("投稿の公開に失敗しました")
-        }
+//         if (!publishResponse || !publishResponse.id) {
+//             throw new Error("投稿の公開に失敗しました")
+//         }
 
-        console.log("投稿公開成功:", publishResponse.id)
+//         console.log("投稿公開成功:", publishResponse.id)
 
-        return {
-        success: true,
-        containerId: containerId,
-        postId: publishResponse.id,
-        message: "投稿が正常に完了しました",
-        }
-    } catch (error) {
-        console.error("Instagram投稿プロセスでエラーが発生しました:", error)
-        return {
-        success: false,
-        error: error.message,
-        message: "投稿に失敗しました",
-        }
-    }
-}
+//         return {
+//         success: true,
+//         containerId: containerId,
+//         postId: publishResponse.id,
+//         message: "投稿が正常に完了しました",
+//         }
+//     } catch (error) {
+//         console.error("Instagram投稿プロセスでエラーが発生しました:", error)
+//         return {
+//         success: false,
+//         error: error.message,
+//         message: "投稿に失敗しました",
+//         }
+//     }
+// }
