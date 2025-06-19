@@ -215,7 +215,7 @@ const OfflinePostScheduler = ({ isOnline = true, setNotification = () => {} }) =
       const postId = await savePost(postData)
 
       // 保存後の検証
-      if (postId) {
+      try {
 
         // 保存後の処理
         let message = ""
@@ -249,6 +249,9 @@ const OfflinePostScheduler = ({ isOnline = true, setNotification = () => {} }) =
         type: "error",
         message: "投稿の処理に失敗しました",
       })
+    }
+    }catch(error){
+      console.error("投稿の保存中にエラーが発生しました:", error)
     } finally {
       setIsSaving(false)
     }
