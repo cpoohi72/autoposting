@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { getAllPosts, deletePost } from "../utils/indexedDB"
-import toast,{ Toaster } from "react-hot-toast"
 
 function SavedPosts({ isOnline, setNotification }) {
   const [posts, setPosts] = useState([])
@@ -34,16 +33,16 @@ function SavedPosts({ isOnline, setNotification }) {
       try {
         await deletePost(id)
         fetchPosts()
-        toast.success("投稿を削除しました", {
-          duration: 3000,
-          position: "top-center",
+        setNotification({
+          type: "success",
+          message: "投稿を削除しました",
         })
       } catch (err) {
         setError("投稿の削除に失敗しました")
         console.error(err)
-        toast.error("投稿の削除に失敗しました", {
-          duration: 3000,
-          position: "top-center",
+        setNotification({
+          type: "error",
+          message: "投稿の削除に失敗しました",
         })
       }
     }
@@ -148,8 +147,6 @@ function SavedPosts({ isOnline, setNotification }) {
       <button onClick={fetchPosts} className="mt-3 w-full bg-blue-500 text-white rounded-lg py-2 text-sm">
         更新
       </button>
-
-      <Toaster />
     </div>
   )
 }

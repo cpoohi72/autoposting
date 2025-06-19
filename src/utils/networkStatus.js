@@ -1,4 +1,5 @@
 import { getAllPosts, updatePostStatus } from "./indexedDB"
+import { postToInstagram } from "./instagramGraphAPI"
 
 // ネットワーク状態を監視する
 export const setupNetworkMonitoring = (callback) => {
@@ -25,22 +26,22 @@ export const setupNetworkMonitoring = (callback) => {
   }
 }
 
-// 投稿をAPIに送信する関数（実際のAPIエンドポイントに置き換えてください）
-export const sendPostToAPI = async (post) => {
-  // この例では、実際のAPIエンドポイントの代わりにタイムアウトを使用
-  // 実際のアプリでは、ここで実際のAPIリクエストを行います
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      console.log("投稿を送信しました:", {
-        caption: post.caption,
-        image: post.image ? "Image data included" : "No image",
-        postingOption: post.postingOption,
-        scheduledDateTime: post.scheduledDateTime,
-      })
-      resolve({ success: true, message: "投稿が完了しました" })
-    }, 1500)
-  })
-}
+// // 投稿をAPIに送信する関数（実際のAPIエンドポイントに置き換えてください）
+// export const sendPostToAPI = async (post) => {
+//   // この例では、実際のAPIエンドポイントの代わりにタイムアウトを使用
+//   // 実際のアプリでは、ここで実際のAPIリクエストを行います
+//   return new Promise((resolve) => {
+//     setTimeout(() => {
+//       console.log("投稿を送信しました:", {
+//         caption: post.caption,
+//         image: post.image ? "Image data included" : "No image",
+//         postingOption: post.postingOption,
+//         scheduledDateTime: post.scheduledDateTime,
+//       })
+//       resolve({ success: true, message: "投稿が完了しました" })
+//     }, 1500)
+//   })
+// }
 
 // オンラインになったときに投稿を処理する
 export const processPostsWhenOnline = async (setNotification = () => {}) => {
@@ -62,7 +63,7 @@ export const processPostsWhenOnline = async (setNotification = () => {}) => {
     for (const post of postsToSend) {
       try {
         // APIに投稿を送信
-        const result = await sendPostToAPI(post)
+        const result = await postToInstagram(post)
 
         if (result.success) {
           // 投稿が成功したら、ステータスを更新

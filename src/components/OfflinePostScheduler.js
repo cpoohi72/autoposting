@@ -2,21 +2,20 @@
 
 import { useState, useEffect } from "react"
 import { savePost } from "../utils/indexedDB"
-import toast, { Toaster } from "react-hot-toast"
 import {postToInstagram} from "../utils/instagramGraphAPI"
 
 const OfflinePostScheduler = ({ isOnline = true, setNotification = () => {} }) => {
   const [saveError, setSaveError] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
-  const [selectedImage, setSelectedImage] = useState(null)
-  const [image_url, setImage_url] = useState("")
+  const [image_url, setImage_url] = useState(null)
   const [caption, setCaption] = useState("")
-  const [post_date, setPost_date] = useState("")
+  const [post_date, setPost_date] = useState(null)
   const [network_flag, setNetwork_flag] = useState(1) // 1:接続時に投稿、0:日時指定
   const [post_status, setPost_status] = useState("PENDING") // 投稿ステータス
-  const [delete_flag, setDelete_flag] = useState(0) // 削除フラグ
-  const [created_at, setCreated_at] = useState(new Date().toISOString()) // 作成日時
-  const [deleted_at, setDeleted_at] = useState(null) // 削除日時
+  const [delete_flag] = useState(0) // 削除フラグ
+  const [created_at] = useState(new Date().toISOString()) // 作成日時
+  const [updated_at] = useState(null) // 更新日時
+  const [deleted_at] = useState(null) // 削除日時
   const [viewportHeight, setViewportHeight] = useState(0)
   const [showLimitations, setShowLimitations] = useState(false)
 
@@ -67,7 +66,7 @@ const OfflinePostScheduler = ({ isOnline = true, setNotification = () => {} }) =
     if (file) {
       const reader = new FileReader()
       reader.onload= (e) => {
-        setSelectedImage(e.target.result)
+        setImage_url(e.target.result)
       }   
       reader.readAsDataURL(file)
     }
@@ -109,38 +108,38 @@ const OfflinePostScheduler = ({ isOnline = true, setNotification = () => {} }) =
       setSaveError(null)
 
       // バリデーション
-      if (!selectedImage) {
-        toast.error("画像を選択してください", {
-          duration: 3000,
-          position: "top-center",
+      if (!image_url) {
+        setNotification({
+          type: "error",
+          message: "画像を選択してください",
         })
         return
       }
 
       // 画像データの詳細チェック
-      if (!selectedImage.startsWith("data:image/")) {
-        console.error("無効な画像データ形式:", selectedImage.substring(0, 50))
-        toast.error("無効な画像データです", {
-          duration: 3000,
-          position: "top-center",
+      if (!image_url.startsWith("data:image/")) {
+        console.error("無効な画像データ形式:", image_url.substring(0, 50))
+        setNotification({
+          type: "error",
+          message: "無効な画像データです",
         })
         return
       }
 
       // キャプションの制限チェック
       if (captionStats.isCharLimitExceeded) {
-        toast.error("キャプションが2,200文字を超えています", {
-          duration: 3000,
-          position: "top-center",
+        setNotification({
+          type: "error",
+          message: "キャプションが2,200文字を超えています",
         })
         return
       }
 
       // 日時指定が選択されているが日時が設定されていない場合
       if (network_flag === 0 && !post_date) {
-        toast.error("投稿日時を指定してください", {
-          duration: 3000,
-          position: "top-center",
+        setNotification({
+          type: "error",
+          message: "投稿日時を指定してください",
         })
         return
       }
@@ -170,13 +169,14 @@ const OfflinePostScheduler = ({ isOnline = true, setNotification = () => {} }) =
 
       // 投稿データを作成
       const postData = {
-        image_url: selectedImage, // Base64画像データ
+        image_url, // Base64画像データ
         caption,
         post_date: network_flag === 0 ? post_date : null,
         network_flag,
         post_status,
         delete_flag,
         created_at,
+        updated_at,
         deleted_at,
       }
 
@@ -184,23 +184,18 @@ const OfflinePostScheduler = ({ isOnline = true, setNotification = () => {} }) =
       if (isOnline && network_flag === 1) {
         try {
           // 実際の投稿処理をシミュレート
-          const response = await postToInstagram(postData.image_url, postData.caption)
+          const response = await postToInstagram(image_url, caption)
           if (!response || !response.success) {
             throw new Error(response.error || "投稿に失敗しました")
           }else{
-            toast.success("投稿が完了しました！", {
-              duration: 4000,
-              position: "top-center",
-              style: {
-                background: "#10B981",
-                color: "#fff",
-                fontWeight: "bold",
-              },
+            setNotification({
+              type: "success",
+              message: "投稿が完了しました！",
             })
           }
 
           // フォームをリセット
-          setSelectedImage(null)
+          setImage_url(null)
           setCaption("")
           setPost_date("")
           setCaptionStats(calculateCaptionStats(""))
@@ -208,10 +203,10 @@ const OfflinePostScheduler = ({ isOnline = true, setNotification = () => {} }) =
         } catch (error) {
           console.error("投稿中にエラーが発生しました:", error)
           // エラーの場合は保存して後で投稿
-          postData.post_status = "FAILED"
-          toast.error("投稿に失敗しました", {
-            duration: 4000,
-            position: "top-center",
+          setPost_status("FAILED")
+          setNotification({
+            type: "error",
+            message: "投稿に失敗しました",
           })
         }
       }
@@ -225,41 +220,34 @@ const OfflinePostScheduler = ({ isOnline = true, setNotification = () => {} }) =
         // 保存後の処理
         let message = ""
         if (network_flag === 0) {
-          const date = new Date(post_date)
-          toast.success("予約投稿が設定されました！", {
-            duration: 4000,
-            position: "top-center",
+          setNotification({
+            type: "success",
+            message: "予約投稿が設定されました！",
           })
         } else if (network_flag === 1) {
           message = isOnline
             ? "投稿が保存されました"
             : "オフラインのため投稿を保存しました。オンライン時に自動投稿されます"
-          toast.success("投稿が保存されました", {
-            duration: 4000,
-            position: "top-center",
+          setNotification({
+            type: "success",
+            message: message,
           })
+
+          // フォームをリセット
+          setImage_url(null)
+          setCaption("")
+          setPost_date(null)
+          setCaptionStats(calculateCaptionStats(""))
+        } else {
+          throw new Error("保存IDが取得できませんでした")
         }
-
-        setNotification({
-          type: "success",
-          message: message,
-        })
-
-        // フォームをリセット
-        setSelectedImage(null)
-        setCaption("")
-        setPost_date("")
-        setCaptionStats(calculateCaptionStats(""))
-      } else {
-        throw new Error("保存IDが取得できませんでした")
-      }
-    } catch (error) {
+      } catch (error) {
       console.error("投稿の保存中にエラーが発生しました:", error)
       setSaveError("投稿の処理に失敗しました。もう一度お試しください。")
 
-      toast.error("投稿の処理に失敗しました", {
-        duration: 4000,
-        position: "top-center",
+      setNotification({
+        type: "error",
+        message: "投稿の処理に失敗しました",
       })
     } finally {
       setIsSaving(false)
@@ -301,12 +289,12 @@ const OfflinePostScheduler = ({ isOnline = true, setNotification = () => {} }) =
           <label
             htmlFor="image-upload"
             className="border border-gray-200 rounded-lg bg-gray-50 flex flex-col items-center justify-center p-4 cursor-pointer"
-            style={{ minHeight: selectedImage ? "auto" : "112px" }}
+            style={{ minHeight: image_url ? "auto" : "112px" }}
           >
-            {selectedImage ? (
+            {image_url ? (
               <div className="w-full">
                 <img
-                  src={selectedImage || "/placeholder.svg"}
+                  src={image_url || "/placeholder.svg"}
                   alt="選択された画像"
                   className="w-full h-auto object-contain rounded-lg"
                   style={{
@@ -473,8 +461,6 @@ const OfflinePostScheduler = ({ isOnline = true, setNotification = () => {} }) =
           <button className="text-xs text-gray-500">保存済み</button>
         </div>
       </div>
-
-      <Toaster />
     </div>
   )
 }

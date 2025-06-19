@@ -56,16 +56,20 @@ export const savePost = async (postData) => {
         image_url: postData.image_url, // Base64画像データ
         caption: postData.caption, // 投稿の文章
         post_date: postData.post_date, // 投稿予約時間
-        post_status: postData.post_status || "PENDING", // 投稿の状態
+        post_status: postData.post_status, // 投稿の状態
         network_flag: postData.network_flag, // ネット接続時に投稿かどうか
-        delete_flag: postData.delete_flag || 0, // 削除フラグ（デフォルトは0）
+        delete_flag: postData.delete_flag, // 削除フラグ（デフォルトは0）
         created_at: postData.created_at, // 作成日時
+        updated_at: postData.updated_at, // 更新日時（初期はnull）
         deleted_at: postData.deleted_at, // 削除日時（初期はnull）
       }
 
       const request = store.add(post)
 
       request.onsuccess = (event) => {
+        post.created_at = new Date().toISOString() // 作成日時をISO文字列形式で保存
+        const updateRequest = store.put(post)
+
         const result = event.target.result
         console.log("投稿保存成功 ID:", result)
         resolve(result) // 生成されたpost_idを返す
@@ -83,7 +87,7 @@ export const savePost = async (postData) => {
   }
 }
 
-// 投稿のステータスを更新
+// 投稿のステータスを更新(networkStatus.jsで使用)
 export const updatePostStatus = async (post_id, status) => {
   try {
     const db = await openDB()

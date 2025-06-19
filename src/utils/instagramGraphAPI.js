@@ -172,19 +172,3 @@ export async function postToInstagram(image_url, caption) {
         }
     }
 }
-
-/**
- * テスト用の投稿関数
- * @returns {Promise<Object>} - テスト結果
- */
-export async function testInstagramPost(postData) {
-    console.log("Instagram API テスト開始...")
-
-    const testImageUrl = "https://picsum.photos/800/600"
-    const testCaption = "テスト投稿 #test #instagram"
-
-    const result = await postToInstagram(testImageUrl, testCaption)
-
-    console.log("テスト結果:", result)
-    return result
-}
