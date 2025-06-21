@@ -43,9 +43,11 @@ function App() {
         // オンラインになったときの処理
         processPostsWhenOnline(setNotification);
         
-        // Service Worker でのバックグラウンド同期もトリガー
+        // Service Worker でのバックグラウンド同期もトリガー（遅延実行）
         if (serviceWorkerReady) {
-          triggerBackgroundSync();
+          setTimeout(() => {
+            triggerBackgroundSync();
+          }, 1000); // 1秒待ってから実行
         }
       }
     });
