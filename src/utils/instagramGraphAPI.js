@@ -1,6 +1,4 @@
 import { uploadImageToS3 } from './s3Upload';
-// 署名付きURLを使用する場合は以下のインポートを使用
-// import { uploadImageToS3WithPresignedUrl as uploadImageToS3 } from './s3UploadWithPresignedUrl';
 import { updatePostImageAndStatus } from './indexedDB';
 
 // Instagram API設定
@@ -203,51 +201,3 @@ export async function processInstagramPost(postData) {
         };
     }
 }
-
-
-/**
- * 完全な投稿プロセス（コンテナ作成 → 公開）
- * @param {string} image_url - 画像のURL
- * @param {string} caption - 投稿のキャプション
- * @returns {Promise<Object>} - 投稿結果
- */
-// export async function postToInstagram(image_url, caption) {
-//     try {
-//         console.log("Instagram投稿プロセス開始...")
-
-//         // 1. コンテナを作成
-//         console.log("ステップ1: コンテナ作成中...")
-//         const containerResponse = await makeContainerAPI(image_url, caption)
-
-//         if (!containerResponse || !containerResponse.id) {
-//             throw new Error("コンテナの作成に失敗しました")
-//         }
-
-//         const containerId = containerResponse.id
-//         console.log("コンテナ作成成功:", containerId)
-
-//         // 2. 投稿を公開
-//         console.log("ステップ2: 投稿公開中...")
-//         const publishResponse = await publishPost(containerId)
-
-//         if (!publishResponse || !publishResponse.id) {
-//             throw new Error("投稿の公開に失敗しました")
-//         }
-
-//         console.log("投稿公開成功:", publishResponse.id)
-
-//         return {
-//         success: true,
-//         containerId: containerId,
-//         postId: publishResponse.id,
-//         message: "投稿が正常に完了しました",
-//         }
-//     } catch (error) {
-//         console.error("Instagram投稿プロセスでエラーが発生しました:", error)
-//         return {
-//         success: false,
-//         error: error.message,
-//         message: "投稿に失敗しました",
-//         }
-//     }
-// }
