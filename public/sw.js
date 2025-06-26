@@ -170,16 +170,18 @@ async function sendPostToAPI(post) {
   // 実際の実装では、APIエンドポイントに投稿を送信
   const response = await fetch('/api/posts', {
     method: 'POST',
+    //headersはリクエストのヘッダー
     headers: {
       'Content-Type': 'application/json',
     },
+    //bodyは投稿の内容。stringifyはJSONを文字列に変換する
     body: JSON.stringify(post)
   });
   
   if (!response.ok) {
     throw new Error('投稿の送信に失敗しました');
   }
-  
+  //response.json()はレスポンスのJSONを返す
   return response.json();
 }
 
